@@ -144,7 +144,7 @@
         ]
       },
       {
-        name: "Jangle på Vollane",
+        name: "Gamlebyen",
         lat: 59.200965,
         lon: 10.948700,
         temperature: null,
@@ -157,7 +157,7 @@
         ]
       },
       {
-        name: "Hva må du gjøre i varmen?",
+        name: "Fredrikstad sentrum",
         lat: 59.213174,
         lon: 10.935622,
         temperature: null,
@@ -183,7 +183,7 @@
         ]
       },
       {
-        name: "De som ikke hopper",
+        name: "Kirkens Bymisjon Fredrikstad",
         lat: 59.212354,
         lon: 10.935563,
         temperature: null,
@@ -196,8 +196,8 @@
         ]
       },
       {
-        // Nytt punkt: Softistesten
-        name: "Softistesten",
+        // Nytt punkt: Softis i Nygaardsgata
+        name: "Softis i Nygaardsgata",
         lat: 59.208470,
         lon: 10.941760,
         temperature: null,
@@ -212,14 +212,14 @@
     ];
 
     // Opprett kartet (oversikt over området)
-    const map = L.map("map").setView([59.171, 10.8], 11);
+    const map = L.map("map").setView([59.19, 10.86], 11);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> bidragsytere'
     }).addTo(map);
 
-    // For å kunne oppdatere popupene senere hvis vi vil
+    // For å kunne oppdatere popupene senere
     const markerByName = {};
 
     // Emoji-ikoner
@@ -264,7 +264,7 @@
       "Softis i Nygaardsgata": "icecream"
     };
 
-    // Lager HTML til popup
+    // Bygger popup-HTML
     function buildPopupContent(spot) {
       const tempText = spot.temperature !== null ? `${spot.temperature} °C` : "Ukjent";
       let html = `<div class="popup-content"><h3>${spot.name}</h3>`;
@@ -282,8 +282,8 @@
         html += "<p><strong>Video:</strong></p>";
         html += '<div class="video-container">';
         spot.videos.forEach(video => {
-          // Hvis du senere bruker YouTube-lenker:
           if (video.url.includes("youtube.com") || video.url.includes("youtu.be")) {
+            // YouTube-håndtering hvis du bruker det senere
             let embedUrl = video.url;
             if (video.url.includes("youtu.be/")) {
               const videoId = video.url.split("youtu.be/")[1];
@@ -318,7 +318,7 @@
       markerByName[spot.name] = marker;
     });
 
-    // Hente badetemperaturer (kan kommenteres bort hvis ikke i bruk)
+    // Hente badetemperaturer (valgfritt – kan kommenteres bort)
     async function updateTemperatures() {
       try {
         const url =
