@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sommerkart</title>
 
-  <!--
-    Denne filen viser et interaktivt kart over utvalgte badeplasser i
-    Fredrikstad–Hvaler-regionen. Kartet er satt opp med Leaflet og
-    OpenStreetMap som bakgrunnskart. Når du klikker på en badeplass
-    vises informasjon om badetemperatur, artikler og video i en popup.
-  -->
-
   <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
@@ -88,7 +81,7 @@
         name: "Foten badeplass",
         lat: 59.1703546,
         lon: 10.8266099,
-        temperature: 1,
+        temperature: null,
         articles: [],
         videos: [
           {
@@ -101,7 +94,7 @@
         name: "Vispen",
         lat: 59.0,   // TODO: legg inn korrekte koordinater
         lon: 10.0,
-        temperature: 3,
+        temperature: null,
         articles: [],
         videos: []
       },
@@ -109,7 +102,7 @@
         name: "Tangen",
         lat: 59.0,   // TODO: legg inn korrekte koordinater
         lon: 10.0,
-        temperature: 4,
+        temperature: null,
         articles: [],
         videos: []
       },
@@ -118,7 +111,7 @@
         name: "Glufsa",
         lat: 59.17639104968224,
         lon: 10.882157758300316,
-        temperature: 4,
+        temperature: null,
         articles: [],
         videos: [
           {
@@ -132,7 +125,7 @@
         name: "Mærrapanna",
         lat: 59.1974631,
         lon: 10.7960442,
-        temperature: 17,
+        temperature: null,
         articles: [],
         videos: [
           {
@@ -146,7 +139,7 @@
         name: "Dammene",
         lat: 59.2323927,
         lon: 10.9475110,
-        temperature: 20,
+        temperature: null,
         articles: [],
         videos: [
           {
@@ -170,7 +163,7 @@
         ]
       },
       {
-        // Fredrikstad sentrum
+        // Fredrikstad sentrum – varmevideoen
         name: "Fredrikstad sentrum",
         lat: 59.213174,
         lon: 10.935622,
@@ -212,7 +205,7 @@
         ]
       },
       {
-        // Softis – Nygaardsgata 4
+        // Softis i Nygaardsgata 4, 1606 Fredrikstad
         name: "Softis i Nygaardsgata",
         lat: 59.208470,
         lon: 10.941760,
@@ -225,8 +218,6 @@
           }
         ]
       }
-
-      // Her kan du legge til flere badeplasser senere
     ];
 
     // Opprett kartet
@@ -363,6 +354,11 @@
     }
 
     // Kall funksjonen (kan kommenteres bort)
+    updateTemperatures();
+  </script>
+</body>
+</html>
+
     updateTemperatures();
   </script>
 </body>
