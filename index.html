@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sommerkart</title>
+  <!--
+    Denne filen viser et interaktivt kart over utvalgte badeplasser i
+    Fredrikstad–Hvaler-regionen. Kartet er satt opp med Leaflet og
+    OpenStreetMap som bakgrunnskart. Når du klikker på en badeplass
+    blir informasjon om badetemperatur, relaterte artikler fra
+    Fredriksstad Blad og eventuelle videoer vist i en popup.
+
+    Slik oppdaterer du innholdet:
+      • Legg til flere badeplasser i arrayet `bathingSpots` nedenfor.
+        Oppgi navn, breddegrad (lat) og lengdegrad (lon). Hvis du
+        ikke vet koordinatene kan du legge inn midlertidige verdier
+        (for eksempel 59.2180, 10.9340 for sentrum av Fredrikstad) og
+        oppdatere dem senere.
+      • For hver badeplass kan du angi en liste med artikler og
+        videoer. Artikler vises som klikkbare lenker. Videoer kan
+        enten være lokale filer du laster opp eller eksterne URL-er
+        (for eksempel YouTube). Hvis du trenger hjelp med å laste
+        opp artikler eller videoer, gi beskjed.
+      • Temperaturinformasjonen kan enten skrives inn manuelt i
+        `bathingSpots` eller hentes automatisk fra Fredrikstad
+        kommunes IOT‑tjeneste. Funksjonen `updateTemperatures()`
+        demonstrerer hvordan du kan hente data fra ArcGIS‑tjenesten
+        “BadetemperaturInnsyn” (forutsetter at tjenesten er åpen og
+        tillater CORS). Det kan hende du må justere felt‑navn eller
+        endepunkt avhengig av hvilke data som tilgjengeliggjøres av
+        kommunen.
+
+    Merk: Leaflet og OpenStreetMap er inkludert via CDN. Hvis du
+    ønsker å drifte kartet uten internettforbindelse, kan du laste
+    ned disse bibliotekene og flistene lokalt.
+  -->
+  <!--
+    Load Leaflet's CSS from the official unpkg CDN.  It's important that
+    the integrity hashes match the published release; otherwise the
+    browser may refuse to load the resource for security reasons (as
+    happened previously).  See the Leaflet download page for current
+    checksums.
+  -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    #map {
+      width: 100%;
+      height: 80vh;
+    }
+    .popup-content {
+      max-width: 400px;
+    }
+    .video-container {
+      margin-top: 0.5rem;
+    }
+    .video-container video,
+    .video-container iframe {
+      width: 100%;
+      height: 200px;
+    }
+
+    /* Stil for emoji-baserte markører. Ved å gi markørene en bakgrunn og større størrelse
+       fremheves de tydeligere mot kartet. Bakgrunnen er halvtransparent hvit for
+       bedre kontrast på både lys og mørk bakgrunn. */
+    .emoji-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      font-size: 28px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Stil for sidetittelen. Vi bruker en stor serif-font og sentererer teksten.
+       Margin-top og margin-bottom justeres for å gi luft rundt tittelen. */
+    .header-container h1 {
+      font-family: "Georgia", "Times New Roman", serif;
+      font-size: 2rem;
+      text-align: center;
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidehode med tittel. Logoen er fjernet og erstattet med navnet på kartet. -->
+  <div class="header-container">
+    <h1>Sommerkart</h1>
+  </div>
+  <div id="map"></div>
+
+  <!--
+    Load Leaflet's JavaScript from the CDN with the correct Subresource
+    Integrity (SRI) hash.  Without the correct hash the script will be
+    silently blocked by modern browsers, resulting in the map not
+    rendering.  The hash below is from the official Leaflet 1.9.4
+    release.
+  -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    // Liste over badeplasser. Fyll inn flere badeplasser her etter behov.
+    // Hver oppføring kan ha navn, lat/lon, temperatur (eventuelt null
+    // hvis den skal hentes automatisk) og lister over artikler og
+    // videoer.
+    const bathingSpots = [
+      {
+        name: "Foten badeplass",
+        lat: 59.1703546, // Breddegrad
+        lon: 10.8266099, // Lengdegrad
+        temperature: null, // settes senere av updateTemperatures()
+        // Ingen artikler for Foten. Artiklene-listen er satt tom siden vi
+        // fjerner eksempelartikkelen.
+        articles: [],
+        // Videoer for Foten. Videofilene er lagret i samme mappe som HTML-filen.
+        videos: [
+          {
+            // Denne videoen er lastet opp av brukeren og viser Foten badeplass.
+            title: "Video fra Foten",
+            url: "Foten1.mp4"
+          }
+        ]
+      },
+      {
+        name: "Vispen",
+        lat: 59.0, // TODO: legg inn korrekte koordinater
+        lon: 10.0,
+        temperature: null,
+        articles: [],
+        videos: []
+      },
+      {
+        name: "Tangen",
+        lat: 59.0, // TODO: legg inn korrekte koordinater
+        lon: 10.0,
+        temperature: null,
+        articles: [],
+        videos: []
+      },
+      {
+        // Glufsa er en populær badeplass på Kråkerøy. Koordinater er hentet fra
+        // publikumsdatabasen 2markers (59.17639104968224, 10.882157758300316)【685754086836202†L73-L79】.
+        name: "Glufsa",
+        lat: 59.17639104968224,
+        lon: 10.882157758300316,
+        temperature: null, // oppdateres når kommunen publiserer data
+        articles: [
+          // Her kan du legge til lenker til artikler fra Fredriksstad Blad om Glufsa
+          // { title: "Tittel på artikkel", url: "https://..." }
+        ],
+        videos: [
+          // Video fra Glufsa. Denne filen er lastet opp av brukeren og viser badestedet.
+          {
+            title: "Video fra Glufsa",
+            url: "Glufsa1.mp4"
+          }
+        ]
+      },
+      {
+        // Mærrapanna er et friluftsområde og populær badeplass på Onsøy i Fredrikstad.
+        // Koordinatene under (59.1974631, 10.7960442) kommer fra karttjenesten Maptons,
+        // som oppgir Mærrapannaveien 455 som naturreservat med eksakte bredde- og
+        // lengdegrader【818856199356012†L44-L46】.
+        name: "Mærrapanna",
+        lat: 59.1974631,
+        lon: 10.7960442,
+        temperature: null,
+        // Ingen artikler lagt inn enda; kan fylles senere.
+        articles: [],
+        // Legg inn videoen brukeren lastet opp. Du kan endre tittelen om ønskelig.
+        videos: [
+          {
+            title: "Video fra Mærrapanna",
+            // Videofilen er oppdatert til en ny utgave uten spesialtegn i filnavnet.
+            // encodeURI i buildPopupContent sørger for korrekt koding dersom det trengs.
+            url: "Maerrapanna1.mp4"
+          }
+        ]
+      }
+      ,
+      {
+        // Dammene (Bjørndalsdammene) er et populært område med flere ferskvannsdammer i Fredrikstadmarka.
+        // Koordinatene her (59.2323927, 10.9475110) er hentet fra nettstedet 2Markers som viser
+        // den eksakte plasseringen av Bjørndalsdammene på kart【659599517108540†L74-L78】.
+        name: "Dammene",
+        lat: 59.2323927,
+        lon: 10.9475110,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Video fra Dammene",
+            url: "Dammene1.mp4"
+          }
+        ]
+      }
+      ,
+      {
+        // Gamlebyen/Vollane er en historisk bydel i Fredrikstad, og koordinatene her (59.200965, 10.948700)
+        // peker mot området ved vollane i Gamlebyen. Legg inn den lastede videoen.
+        name: "Gamlebyen",
+        lat: 59.200965,
+        lon: 10.948700,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            // Video fra promenaden "jangle på vollane" i Gamlebyen. Filnavnet inneholder
+            // spesialtegn, men encodeURI i buildPopupContent håndterer dette.
+            title: "Jangle på Vollane",
+            url: "Jangle på Vollane.mp4"
+          }
+        ]
+      }
+      ,
+      {
+        // Denne badeplassen representerer området rundt Fredrikstad sentrum med postnummer 1607.
+        // Koordinatene (59.213174, 10.935622) peker til sentrum ved elvebredden.
+        name: "Fredrikstad sentrum",
+        lat: 59.213174,
+        lon: 10.935622,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            // Lokal video som viser hva man bør gjøre i varmen.
+            title: "Hva må du gjøre i varmen?",
+            url: "Hva må du gjøre i varmen.mp4"
+          }
+        ]
+      }
+      ,
+      {
+        // IDYLL Festivalen holdes på Kråkerøy, og koordinatene (59.202294, 10.944766)
+        // peker til festivalområdet ved Mindre-ælvs vei 2, 1672 Kråkerøy.
+        name: "IDYLL Festivalen",
+        lat: 59.202294,
+        lon: 10.944766,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            // Video fra festivalområdet. Filnavnet inneholder et utropstegn, som støttes av encodeURI.
+            title: "Idyll!",
+            url: "Idyll!.mp4"
+          }
+        ]
+      }
+      ,
+      {
+        // Kirkens Bymisjon Fredrikstad ligger i Storgata 11 i sentrum. Koordinatene under
+        // (59.212354, 10.935563) plasserer markøren ved denne adressen i bykjernen. Det finnes en
+        // kafé og møteplass der mennesker kan møtes, men den er ikke en vanlig badeplass.
+        name: "Kirkens Bymisjon Fredrikstad",
+        lat: 59.212354,
+        lon: 10.935563,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            // Video lastet opp av brukeren. Navnet inneholder særnorske bokstaver, men encodeURI
+            // håndterer dette slik at videoen kan avspilles.
+            title: "SÆRPINGÆR",
+            url: "SÆRPINGÆR.mp4"
+          }
+        ]
+      }
+      // Legg til flere badeplasser her
+    ];
+
+    // Oppretter kartet
+    const map = L.map("map").setView([59.171, 10.8], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> bidragsytere'
+    }).addTo(map);
+
+    // Dictionary for å lagre markører slik at vi kan oppdatere popup senere
+    const markerByName = {};
+
+    // Definer tilpassede ikoner med emojis for de ulike punktene. Standardikonet er
+    // en parasoll (⛱️). For spesielle steder brukes andre symboler: varmen-videoen
+    // får en het-emoji (🥵), SÆRPINGÆR-videoen på Kirkens Bymisjon får en
+    // fotball (⚽️) og IDYLL‑festivalen får en mikrofon (🎤). Disse ikonene
+    // opprettes som DivIcon‑objekter med passende størrelse og anker.
+    const icons = {
+      default: L.divIcon({ className: 'emoji-icon', html: '⛱️', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      heat: L.divIcon({ className: 'emoji-icon', html: '🥵', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      soccer: L.divIcon({ className: 'emoji-icon', html: '⚽️', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      microphone: L.divIcon({ className: 'emoji-icon', html: '🎤', iconSize: [48, 48], iconAnchor: [24, 48] })
+    };
+
+    // Tildel ikon‑typer til spesifikke badeplasser basert på navnet. Alle andre får
+    // standardikonet. Legg til flere navn her hvis du ønsker unike ikoner senere.
+    const iconForSpot = {
+      "Fredrikstad sentrum": 'heat',
+      "Kirkens Bymisjon Fredrikstad": 'soccer',
+      "IDYLL Festivalen": 'microphone'
+    };
+
+    // Funksjon for å bygge popup-HTML basert på badeplassdata
+    function buildPopupContent(spot) {
+      const tempText = spot.temperature !== null ? `${spot.temperature} °C` : 'Ukjent';
+      let html = `<div class="popup-content"><h3>${spot.name}</h3>`;
+      html += `<p><strong>Vanntemperatur:</strong> ${tempText}</p>`;
+      if (spot.articles && spot.articles.length > 0) {
+        html += '<p><strong>Artikler:</strong></p><ul>';
+        spot.articles.forEach(article => {
+          html += `<li><a href="${article.url}" target="_blank" rel="noopener noreferrer">${article.title}</a></li>`;
+        });
+        html += '</ul>';
+      }
+      if (spot.videos && spot.videos.length > 0) {
+        // Legg til en overskrift for videoseksjonen. Bruker singular "Video:" for
+        // å tydeliggjøre at dette er en videoseksjon.
+        html += '<p><strong>Video:</strong></p>';
+        html += '<div class="video-container">';
+        spot.videos.forEach(video => {
+          // Hvis URL peker til en YouTube‑video kan vi bygge inn et iframe.
+          if (video.url.includes('youtube.com') || video.url.includes('youtu.be')) {
+            // Konverter youtu.be-shortlink til embed-lenke hvis nødvendig
+            let embedUrl = video.url;
+            if (video.url.includes('youtu.be/')) {
+              const videoId = video.url.split('youtu.be/')[1];
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (video.url.includes('watch?v=')) {
+              const videoId = video.url.split('watch?v=')[1];
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
+            html += `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+          } else {
+            // Lokal eller annen ekstern video. For lokale filer med spesialtegn eller spørsmålstegn
+            // i filnavnet benytter vi encodeURI, men vi erstatter først alle spørsmålstegn med
+            // deres URL-kodede representasjon (%3F). Dette forhindrer at nettleseren tolker
+            // resten av filnavnet som en query‑string.
+            const urlWithEscapedQuestion = video.url.replace(/\?/g, '%3F');
+            const safeUrl = encodeURI(urlWithEscapedQuestion);
+            // Vi bruker <source> med type="video/mp4" for bedre kompatibilitet i enkelte nettlesere
+            html += `<video controls preload="metadata">
+              <source src="${safeUrl}" type="video/mp4">
+              Nettleseren din støtter ikke videovisning.
+            </video>`;
+          }
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    // Legg ut alle markører. Vi setter et tilpasset ikon basert på spot‑navn.
+    bathingSpots.forEach(spot => {
+      // Finn ikon‑nøkkel fra mappingen, eller bruk standard hvis ikke definert
+      const iconKey = iconForSpot[spot.name] || 'default';
+      const marker = L.marker([spot.lat, spot.lon], { icon: icons[iconKey] }).addTo(map);
+      marker.bindPopup(buildPopupContent(spot));
+      markerByName[spot.name] = marker;
+    });
+
+    // Funksjon som henter badetemperaturer fra Fredrikstad kommunes IOT‑tjeneste
+    // og oppdaterer popupene. Denne funksjonen kan kalles når kartet
+    // initialiseres eller på interval.
+    async function updateTemperatures() {
+      try {
+        // ArcGIS-tjenesten returnerer temperaturer for alle sensorer.
+        // NB: Endpoint kan kreve token/CORS – test i nettleserens devtools.
+        const url = 'https://arcgis.fredrikstad.kommune.no/server/rest/services/IOT/BadetemperaturInnsyn/MapServer/0/query?where=1%3D1&outFields=NAVN,TEMPERATUR,TIME&f=pjson';
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn('Fikk ikke tilgang til badetemperaturer fra kommunen');
+          return;
+        }
+        const data = await response.json();
+        if (data.features) {
+          data.features.forEach(feature => {
+            const attrs = feature.attributes || feature;
+            const name = attrs.NAVN;
+            const temp = attrs.TEMPERATUR;
+            // Finn tilhørende badeplass i vårt array
+            const spot = bathingSpots.find(s => s.name.toLowerCase() === name.toLowerCase());
+            if (spot) {
+              spot.temperature = temp;
+              // Oppdater popup hvis markøren eksisterer
+              const marker = markerByName[spot.name];
+              if (marker) {
+                marker.setPopupContent(buildPopupContent(spot));
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Feil ved henting av badetemperaturer:', error);
+      }
+    }
+
+    // Kall funksjonen for å hente temperaturer. Kommenter ut hvis du heller
+    // ønsker å oppdatere temperatur manuelt i bathingSpots-arrayet.
+    updateTemperatures();
+  </script>
+</body>
+</html>
