@@ -6,6 +6,7 @@
 <title>Sommerkart</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Sommerkart" />
 
 <link
@@ -47,16 +48,6 @@ header h1 {
 #app {
   height: calc(100vh - var(--header) - var(--tabbar));
   position: relative;
-}
-
-/* VIEWS */
-.view {
-  position: absolute;
-  inset: 0;
-  display: none;
-}
-.view.active {
-  display: block;
 }
 
 /* MAP */
@@ -101,46 +92,13 @@ header h1 {
   font-size: 13px;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 #tabbar button.active {
   color: #fff;
 }
-
-/* REELS */
-#reels {
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-}
-.reel {
-  height: 100%;
-  scroll-snap-align: start;
-  position: relative;
-}
-.reel video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
-}
-.reel-info {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  font-size: 14px;
-  pointer-events: none;
-}
-
-/* ICONS */
-.emoji-icon {
-  width: 48px;
-  height: 48px;
-  font-size: 28px;
-  background: rgba(255,255,255,0.95);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+#tabbar button span.icon {
+  font-size: 1.2rem;
 }
 </style>
 </head>
@@ -153,7 +111,7 @@ header h1 {
 <div id="app">
 
   <!-- MAP VIEW -->
-  <div id="map-view" class="view active">
+  <div id="map-view">
     <div id="map"></div>
     <div id="map-controls">
       <button id="btn-home">🗺 Hele kartet</button>
@@ -162,97 +120,90 @@ header h1 {
     </div>
   </div>
 
-  <!-- REELS VIEW -->
-  <div id="reels-view" class="view">
-    <div id="reels"></div>
-  </div>
-
 </div>
 
 <!-- TABBAR -->
 <div id="tabbar">
-  <button id="tab-map" class="active">🗺<span>Kart</span></button>
-  <button id="tab-reels">🎞<span>Reels</span></button>
+  <button id="tab-map" class="active">
+    <span class="icon">🗺</span>
+    <span>Kart</span>
+  </button>
+
+  <!-- NY knapp for Fredriksstad Blad -->
+  <button id="tab-fb">
+    <span class="icon">📰</span>
+    <span>FB</span>
+  </button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-/* DATA */
+// Data – badeplasser og videoer
 const spots = [
-  { name:"Foten", lat:59.17035, lon:10.82661, video:"foten.mp4" },
+  { name:"Foten badeplass", lat:59.17035, lon:10.82661, video:"foten.mp4" },
   { name:"Glufsa", lat:59.17639, lon:10.88216, video:"glufsa.mp4" },
   { name:"Mærrapanna", lat:59.19746, lon:10.79604, video:"maerrapanna.mp4" },
   { name:"Dammene", lat:59.23239, lon:10.94751, video:"dammene.mp4" },
   { name:"Gamlebyen", lat:59.20096, lon:10.9487, video:"jangle-pa-vollane.mp4" },
-  { name:"Sentrum", lat:59.21317, lon:10.93562, video:"varmen.mp4" },
-  { name:"IDYLL", lat:59.20229, lon:10.94477, video:"idyll.mp4" },
-  { name:"Særpingær", lat:59.21235, lon:10.93556, video:"saerpingaer.mp4" },
-  { name:"Softis", lat:59.20847, lon:10.94176, video:"softis.mp4" }
+  { name:"Fredrikstad sentrum", lat:59.21317, lon:10.93562, video:"varmen.mp4" },
+  { name:"IDYLL Festivalen", lat:59.20229, lon:10.94477, video:"idyll.mp4" },
+  { name:"Kirkens Bymisjon Fredrikstad", lat:59.21235, lon:10.93556, video:"saerpingaer.mp4" },
+  { name:"Softis i Nygaardsgata", lat:59.20847, lon:10.94176, video:"softis.mp4" }
 ];
 
-/* MAP */
+/* SET UP MAP */
 const map = L.map("map").setView([59.19,10.86],11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 const icons = {
-  Softis:"🍦", IDYLL:"🎤", Sentrum:"🥵", Særpingær:"⚽️"
+  Softis:"🍦",
+  IDYLL:"🎤",
+  "Fredrikstad sentrum":"🥵",
+  "Kirkens Bymisjon Fredrikstad":"⚽️"
 };
 
 const markers = {};
-spots.forEach(s=>{
+spots.forEach(s => {
   const icon = L.divIcon({
-    className:"emoji-icon",
+    className: "emoji-icon",
     html: icons[s.name] || "⛱️",
-    iconSize:[48,48], iconAnchor:[24,48]
+    iconSize: [48,48],
+    iconAnchor: [24,48]
   });
   const m = L.marker([s.lat,s.lon],{icon}).addTo(map);
   m.bindPopup(`<b>${s.name}</b><br><video controls width="100%" src="${s.video}"></video>`);
-  markers[s.name]=m;
+  markers[s.name] = m;
 });
 
 /* MAP BUTTONS */
-btnHome.onclick=()=>map.setView([59.19,10.86],11);
-btnSoftis.onclick=()=>{
-  const s=spots.find(x=>x.name==="Softis");
-  map.setView([s.lat,s.lon],17);
-  markers.Softis.openPopup();
-};
-btnLocate.onclick=()=>{
-  navigator.geolocation.getCurrentPosition(p=>{
-    map.setView([p.coords.latitude,p.coords.longitude],15);
-  });
+btnHome.onclick = ()=>map.setView([59.19,10.86],11);
+
+btnSoftis.onclick = ()=>{
+  const s = spots.find(x=>x.name.includes("Softis"));
+  map.setView([s.lat,s.lon],16);
+  markers[s.name].openPopup();
 };
 
-/* REELS */
-const reels=document.getElementById("reels");
-spots.forEach(s=>{
-  const r=document.createElement("div");
-  r.className="reel";
-  r.innerHTML=`
-    <div class="reel-info"><b>${s.name}</b></div>
-    <video controls playsinline preload="metadata" src="${s.video}"></video>
-  `;
-  reels.appendChild(r);
-});
+btnLocate.onclick = ()=>{
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(p=>{
+      map.setView([p.coords.latitude,p.coords.longitude],15);
+    });
+  }
+};
 
-/* TABS */
-tabMap.onclick=()=>{
-  mapView.classList.add("active");
-  reelsView.classList.remove("active");
+/* TAB BUTTONS */
+tabMap.onclick = ()=>{
   tabMap.classList.add("active");
-  tabReels.classList.remove("active");
-  setTimeout(()=>map.invalidateSize(),100);
-};
-tabReels.onclick=()=>{
-  mapView.classList.remove("active");
-  reelsView.classList.add("active");
-  tabMap.classList.remove("active");
-  tabReels.classList.add("active");
+  tabFB.classList.remove("active");
+  // kart vises – ingenting å skjule
 };
 
-/* FIX BLACK MAP */
-window.addEventListener("load",()=>setTimeout(()=>map.invalidateSize(),200));
+tabFB.onclick = ()=>{
+  // Åpne Fredriksstad Blad i ny fane
+  window.open("https://www.f-b.no/","_blank");
+};
 </script>
 </body>
 </html>
