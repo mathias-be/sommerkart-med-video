@@ -1,564 +1,258 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sommerkart</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sommerkart</title>
 
-  <!-- Litt mer app-aktig på iPhone -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Sommerkart">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Sommerkart" />
 
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
 
-  <style>
-    :root {
-      --header-height: 3.2rem;
-      --tabbar-height: 3.2rem;
-    }
+<style>
+:root {
+  --header: 56px;
+  --tabbar: 56px;
+}
 
-    * {
-      box-sizing: border-box;
-    }
+* { box-sizing: border-box; }
 
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #000;
-      color: #fff;
-    }
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
-    .header-container {
-      background: #111;
-      border-bottom: 1px solid #222;
-      height: var(--header-height);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+/* HEADER */
+header {
+  height: var(--header);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  border-bottom: 1px solid #222;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-family: Georgia, serif;
+}
 
-    .header-container h1 {
-      font-family: "Georgia", "Times New Roman", serif;
-      font-size: 1.4rem;
-      margin: 0;
-    }
+/* APP */
+#app {
+  height: calc(100vh - var(--header) - var(--tabbar));
+  position: relative;
+}
 
-    #app {
-      position: relative;
-      height: calc(100vh - var(--header-height) - var(--tabbar-height));
-      overflow: hidden;
-      background: #000;
-    }
+/* VIEWS */
+.view {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.view.active {
+  display: block;
+}
 
-    .view {
-      width: 100%;
-      height: 100%;
-      display: none;
-    }
+/* MAP */
+#map {
+  width: 100%;
+  height: 100%;
+  background: #e0e0e0;
+}
 
-    .view.active {
-      display: block;
-    }
+/* MAP BUTTONS */
+#map-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+#map-controls button {
+  background: rgba(255,255,255,0.95);
+  color: #000;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
 
-    /* Kartet fyller hele app-høyden */
-    #map {
-      width: 100%;
-      height: 100%;
-    }
+/* TABBAR */
+#tabbar {
+  height: var(--tabbar);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: #111;
+  border-top: 1px solid #222;
+}
+#tabbar button {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+}
+#tabbar button.active {
+  color: #fff;
+}
 
-    .popup-content {
-      max-width: 400px;
-      color: #111;
-    }
+/* REELS */
+#reels {
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+}
+.reel {
+  height: 100%;
+  scroll-snap-align: start;
+  position: relative;
+}
+.reel video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.reel-info {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  font-size: 14px;
+  pointer-events: none;
+}
 
-    .video-container {
-      margin-top: 0.5rem;
-    }
-
-    .video-container video,
-    .video-container iframe {
-      width: 100%;
-      height: 200px;
-    }
-
-    .emoji-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 48px;
-      height: 48px;
-      font-size: 28px;
-      background-color: rgba(255, 255, 255, 0.95);
-      border-radius: 50%;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Flytende kart-knapper oppe til høyre */
-    #map-controls {
-      position: absolute;
-      top: 0.6rem;
-      right: 0.6rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      z-index: 900;
-    }
-
-    #map-controls button {
-      border: none;
-      background: rgba(255, 255, 255, 0.95);
-      color: #111;
-      padding: 0.25rem 0.6rem;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      text-align: left;
-    }
-
-    #map-controls button span {
-      margin-right: 0.25rem;
-    }
-
-    #map-controls button:active {
-      transform: translateY(1px);
-      box-shadow: 0 0 1px rgba(0,0,0,0.2);
-    }
-
-    /* Tab-bar nederst (Kart / Reels) */
-    #tabbar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: var(--tabbar-height);
-      background: rgba(15, 15, 15, 0.98);
-      border-top: 1px solid #222;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      z-index: 1000;
-      backdrop-filter: blur(6px);
-    }
-
-    #tabbar button {
-      border: none;
-      background: none;
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.15rem;
-      color: #aaa;
-    }
-
-    #tabbar button span.icon {
-      font-size: 1.2rem;
-    }
-
-    #tabbar button.active {
-      background: #0077ff;
-      color: #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    }
-
-    #tabbar button.active span.icon {
-      font-size: 1.25rem;
-    }
-
-    /* Reels-visning: fullskjerm video, snap per video */
-    #reels-view {
-      height: 100%;
-      overflow-y: auto;
-      scroll-snap-type: y mandatory;
-      background: #000;
-    }
-
-    #reels-list {
-      margin: 0;
-      padding: 0;
-    }
-
-    .reel-card {
-      scroll-snap-align: start;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      background: #000;
-    }
-
-    .reel-card-header {
-      padding: 0.5rem 0.9rem 0.4rem;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.0));
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 2;
-      pointer-events: none; /* så video-knappene funker */
-    }
-
-    .reel-spot {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .reel-title {
-      font-size: 0.8rem;
-      color: #ddd;
-      margin-top: 0.1rem;
-    }
-
-    .reel-video {
-      flex: 1;
-      display: flex;
-      position: relative;
-    }
-
-    .reel-video video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain; /* hele videoen synlig – kan gi sorte felt */
-      background: #000;
-    }
-
-    @media (min-width: 768px) {
-      #app {
-        margin: 0 auto;
-        max-width: 480px;
-      }
-    }
-  </style>
+/* ICONS */
+.emoji-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 28px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
 </head>
+
 <body>
-  <div class="header-container">
-    <h1>Sommerkart</h1>
-  </div>
+<header>
+  <h1>Sommerkart</h1>
+</header>
 
-  <div id="app">
-    <!-- Kart-visning -->
-    <div id="map-view" class="view active">
-      <div id="map"></div>
-      <div id="map-controls">
-        <button id="btn-home"><span>🗺</span> Hele kartet</button>
-        <button id="btn-softis"><span>🍦</span> Softis</button>
-        <button id="btn-locate"><span>📍</span> Finn meg</button>
-      </div>
-    </div>
+<div id="app">
 
-    <!-- Reels-visning -->
-    <div id="reels-view" class="view">
-      <div id="reels-list"></div>
+  <!-- MAP VIEW -->
+  <div id="map-view" class="view active">
+    <div id="map"></div>
+    <div id="map-controls">
+      <button id="btn-home">🗺 Hele kartet</button>
+      <button id="btn-softis">🍦 Softis</button>
+      <button id="btn-locate">📍 Finn meg</button>
     </div>
   </div>
 
-  <!-- Tab-bar nederst -->
-  <div id="tabbar">
-    <button id="tab-map" class="active">
-      <span class="icon">🗺</span>
-      <span>Kart</span>
-    </button>
-    <button id="tab-reels">
-      <span class="icon">🎞</span>
-      <span>Reels</span>
-    </button>
+  <!-- REELS VIEW -->
+  <div id="reels-view" class="view">
+    <div id="reels"></div>
   </div>
 
-  <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+</div>
 
-  <script>
-    // Alle steder på kartet
-    const bathingSpots = [
-      {
-        name: "Foten badeplass",
-        lat: 59.1703546,
-        lon: 10.8266099,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Video fra Foten",
-            url: "foten.mp4"
-          }
-        ]
-      },
-      {
-        name: "Vispen",
-        lat: 59.0,
-        lon: 10.0,
-        temperature: null,
-        articles: [],
-        videos: []
-      },
-      {
-        name: "Tangen",
-        lat: 59.0,
-        lon: 10.0,
-        temperature: null,
-        articles: [],
-        videos: []
-      },
-      {
-        name: "Glufsa",
-        lat: 59.17639104968224,
-        lon: 10.882157758300316,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Video fra Glufsa",
-            url: "glufsa.mp4"
-          }
-        ]
-      },
-      {
-        name: "Mærrapanna",
-        lat: 59.1974631,
-        lon: 10.7960442,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Video fra Mærrapanna",
-            url: "maerrapanna.mp4"
-          }
-        ]
-      },
-      {
-        name: "Dammene",
-        lat: 59.2323927,
-        lon: 10.9475110,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Video fra Dammene",
-            url: "dammene.mp4"
-          }
-        ]
-      },
-      {
-        name: "Gamlebyen",
-        lat: 59.200965,
-        lon: 10.948700,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Jangle på Vollane",
-            url: "jangle-pa-vollane.mp4"
-          }
-        ]
-      },
-      {
-        name: "Fredrikstad sentrum",
-        lat: 59.213174,
-        lon: 10.935622,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Hva må du gjøre i varmen?",
-            url: "varmen.mp4"
-          }
-        ]
-      },
-      {
-        name: "IDYLL Festivalen",
-        lat: 59.202294,
-        lon: 10.944766,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Idyll!",
-            url: "idyll.mp4"
-          }
-        ]
-      },
-      {
-        name: "Kirkens Bymisjon Fredrikstad",
-        lat: 59.212354,
-        lon: 10.935563,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "SÆRPINGÆR",
-            url: "saerpingaer.mp4"
-          }
-        ]
-      },
-      {
-        name: "Softis i Nygaardsgata",
-        lat: 59.208470,
-        lon: 10.941760,
-        temperature: null,
-        articles: [],
-        videos: [
-          {
-            title: "Softis 🍦",
-            url: "softis.mp4"
-          }
-        ]
-      }
-    ];
+<!-- TABBAR -->
+<div id="tabbar">
+  <button id="tab-map" class="active">🗺<span>Kart</span></button>
+  <button id="tab-reels">🎞<span>Reels</span></button>
+</div>
 
-    // Opprett kartet (oversikt over området)
-    const map = L.map("map").setView([59.19, 10.86], 11);
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> bidragsytere'
-    }).addTo(map);
+<script>
+/* DATA */
+const spots = [
+  { name:"Foten", lat:59.17035, lon:10.82661, video:"foten.mp4" },
+  { name:"Glufsa", lat:59.17639, lon:10.88216, video:"glufsa.mp4" },
+  { name:"Mærrapanna", lat:59.19746, lon:10.79604, video:"maerrapanna.mp4" },
+  { name:"Dammene", lat:59.23239, lon:10.94751, video:"dammene.mp4" },
+  { name:"Gamlebyen", lat:59.20096, lon:10.9487, video:"jangle-pa-vollane.mp4" },
+  { name:"Sentrum", lat:59.21317, lon:10.93562, video:"varmen.mp4" },
+  { name:"IDYLL", lat:59.20229, lon:10.94477, video:"idyll.mp4" },
+  { name:"Særpingær", lat:59.21235, lon:10.93556, video:"saerpingaer.mp4" },
+  { name:"Softis", lat:59.20847, lon:10.94176, video:"softis.mp4" }
+];
 
-    const markerByName = {};
+/* MAP */
+const map = L.map("map").setView([59.19,10.86],11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-    const icons = {
-      default: L.divIcon({
-        className: "emoji-icon",
-        html: "⛱️",
-        iconSize: [48, 48],
-        iconAnchor: [24, 48]
-      }),
-      heat: L.divIcon({
-        className: "emoji-icon",
-        html: "🥵",
-        iconSize: [48, 48],
-        iconAnchor: [24, 48]
-      }),
-      soccer: L.divIcon({
-        className: "emoji-icon",
-        html: "⚽️",
-        iconSize: [48, 48],
-        iconAnchor: [24, 48]
-      }),
-      microphone: L.divIcon({
-        className: "emoji-icon",
-        html: "🎤",
-        iconSize: [48, 48],
-        iconAnchor: [24, 48]
-      }),
-      icecream: L.divIcon({
-        className: "emoji-icon",
-        html: "🍦",
-        iconSize: [48, 48],
-        iconAnchor: [24, 48]
-      })
-    };
+const icons = {
+  Softis:"🍦", IDYLL:"🎤", Sentrum:"🥵", Særpingær:"⚽️"
+};
 
-    const iconForSpot = {
-      "Fredrikstad sentrum": "heat",
-      "Kirkens Bymisjon Fredrikstad": "soccer",
-      "IDYLL Festivalen": "microphone",
-      "Softis i Nygaardsgata": "icecream"
-    };
+const markers = {};
+spots.forEach(s=>{
+  const icon = L.divIcon({
+    className:"emoji-icon",
+    html: icons[s.name] || "⛱️",
+    iconSize:[48,48], iconAnchor:[24,48]
+  });
+  const m = L.marker([s.lat,s.lon],{icon}).addTo(map);
+  m.bindPopup(`<b>${s.name}</b><br><video controls width="100%" src="${s.video}"></video>`);
+  markers[s.name]=m;
+});
 
-    function buildPopupContent(spot) {
-      const tempText = spot.temperature !== null ? `${spot.temperature} °C` : "Ukjent";
-      let html = `<div class="popup-content"><h3>${spot.name}</h3>`;
-      html += `<p><strong>Vanntemperatur:</strong> ${tempText}</p>`;
+/* MAP BUTTONS */
+btnHome.onclick=()=>map.setView([59.19,10.86],11);
+btnSoftis.onclick=()=>{
+  const s=spots.find(x=>x.name==="Softis");
+  map.setView([s.lat,s.lon],17);
+  markers.Softis.openPopup();
+};
+btnLocate.onclick=()=>{
+  navigator.geolocation.getCurrentPosition(p=>{
+    map.setView([p.coords.latitude,p.coords.longitude],15);
+  });
+};
 
-      if (spot.articles && spot.articles.length > 0) {
-        html += "<p><strong>Artikler:</strong></p><ul>";
-        spot.articles.forEach(article => {
-          html += `<li><a href="${article.url}" target="_blank" rel="noopener noreferrer">${article.title}</a></li>`;
-        });
-        html += "</ul>";
-      }
+/* REELS */
+const reels=document.getElementById("reels");
+spots.forEach(s=>{
+  const r=document.createElement("div");
+  r.className="reel";
+  r.innerHTML=`
+    <div class="reel-info"><b>${s.name}</b></div>
+    <video controls playsinline preload="metadata" src="${s.video}"></video>
+  `;
+  reels.appendChild(r);
+});
 
-      if (spot.videos && spot.videos.length > 0) {
-        html += "<p><strong>Video:</strong></p>";
-        html += '<div class="video-container">';
-        spot.videos.forEach(video => {
-          if (video.url.includes("youtube.com") || video.url.includes("youtu.be")) {
-            let embedUrl = video.url;
-            if (video.url.includes("youtu.be/")) {
-              const videoId = video.url.split("youtu.be/")[1];
-              embedUrl = `https://www.youtube.com/embed/${videoId}`;
-            } else if (video.url.includes("watch?v=")) {
-              const videoId = video.url.split("watch?v=")[1];
-              embedUrl = `https://www.youtube.com/embed/${videoId}`;
-            }
-            html += `<iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>`;
-          } else {
-            const urlWithEscapedQuestion = video.url.replace(/\?/g, "%3F");
-            const safeUrl = encodeURI(urlWithEscapedQuestion);
-            html += `<video controls preload="metadata" playsinline>
-              <source src="${safeUrl}" type="video/mp4">
-              Nettleseren din støtter ikke videovisning.
-            </video>`;
-          }
-        });
-        html += "</div>";
-      }
+/* TABS */
+tabMap.onclick=()=>{
+  mapView.classList.add("active");
+  reelsView.classList.remove("active");
+  tabMap.classList.add("active");
+  tabReels.classList.remove("active");
+  setTimeout(()=>map.invalidateSize(),100);
+};
+tabReels.onclick=()=>{
+  mapView.classList.remove("active");
+  reelsView.classList.add("active");
+  tabMap.classList.remove("active");
+  tabReels.classList.add("active");
+};
 
-      html += "</div>";
-      return html;
-    }
-
-    bathingSpots.forEach(spot => {
-      const iconKey = iconForSpot[spot.name] || "default";
-      const marker = L.marker([spot.lat, spot.lon], { icon: icons[iconKey] }).addTo(map);
-      marker.bindPopup(buildPopupContent(spot));
-      markerByName[spot.name] = marker;
-    });
-
-    async function updateTemperatures() {
-      try {
-        const url =
-          "https://arcgis.fredrikstad.kommune.no/server/rest/services/IOT/BadetemperaturInnsyn/MapServer/0/query?where=1%3D1&outFields=NAVN,TEMPERATUR,TIME&f=pjson";
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn("Fikk ikke tilgang til badetemperaturer fra kommunen");
-          return;
-        }
-        const data = await response.json();
-        if (data.features) {
-          data.features.forEach(feature => {
-            const attrs = feature.attributes || feature;
-            const name = attrs.NAVN;
-            const temp = attrs.TEMPERATUR;
-            const spot = bathingSpots.find(
-              s => s.name.toLowerCase() === String(name).toLowerCase()
-            );
-            if (spot) {
-              spot.temperature = temp;
-              const marker = markerByName[spot.name];
-              if (marker) {
-                marker.setPopupContent(buildPopupContent(spot));
-              }
-            }
-          });
-        }
-      } catch (error) {
-        console.error("Feil ved henting av badetemperaturer:", error);
-      }
-    }
-
-    updateTemperatures();
-
-    // Kart-knapper
-    const homeButton = document.getElementById("btn-home");
-    if (homeButton) {
-      homeButton.addEventListener("click", () => {
-        map.setView([59.19, 10.86], 11);
-      });
-    }
-
-    const softisButton = document.getElementById("btn-softis");
-    if (softisButton) {
-      softisButton.addEventLi
+/* FIX BLACK MAP */
+window.addEventListener("load",()=>setTimeout(()=>map.invalidateSize(),200));
+</script>
+</body>
+</html>
