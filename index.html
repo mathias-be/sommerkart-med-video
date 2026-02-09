@@ -19,7 +19,8 @@
   <style>
     :root {
       --header-height: 56px;
-      --video-panel-height: 45vh;
+      /* litt lavere panel, så det havner over Safari-baren */
+      --video-panel-height: 40vh;
     }
 
     * {
@@ -133,14 +134,14 @@
       position: absolute;
       left: 0;
       right: 0;
-      bottom: -100%;
+      bottom: -100%; /* skjult */
       height: var(--video-panel-height);
       max-height: 420px;
       background: #111;
       color: #fff;
       border-radius: 18px 18px 0 0;
       box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
-      padding: 10px 12px 12px;
+      padding: 10px 12px 14px;
       z-index: 1000;
       transition: bottom 0.3s ease;
       display: flex;
@@ -148,8 +149,9 @@
       gap: 6px;
     }
 
+    /* litt luft opp fra bunnen, så Safari-baren ikke dekker */
     #video-panel.active {
-      bottom: 0;
+      bottom: 12px;
     }
 
     #video-header {
@@ -186,6 +188,8 @@
       background: #000;
       border-radius: 12px;
       margin-top: 4px;
+      height: 100%;
+      object-fit: contain; /* hele videoen innenfor kortet */
     }
 
     /* Liten "dragbar"-indikator på toppen av panelet */
@@ -358,7 +362,6 @@
 
     function openVideoPanel(spot) {
       videoTitle.textContent = spot.name;
-
       const tempText =
         spot.temperature !== null ? `${spot.temperature} °C` : "Vanntemperatur ukjent";
       videoMeta.textContent = tempText;
@@ -368,10 +371,8 @@
       videoPlayer.currentTime = 0;
       videoPanel.classList.add("active");
 
-      // iOS tillater ikke autoplay uten brukerinteraksjon, men her har
-      // brukeren nettopp klikket, så play() fungerer normalt.
       videoPlayer.play().catch(() => {
-        // Hvis nettleseren nekter autoplay, gjør vi ingenting.
+        // noen nettlesere nekter autoplay, da gjør vi bare ingenting
       });
     }
 
@@ -395,7 +396,6 @@
 
       const marker = L.marker([spot.lat, spot.lon], { icon }).addTo(map);
 
-      // Kun tooltip med navn, ikke video i popup
       marker.bindTooltip(spot.name, { direction: "top", offset: [0, -10] });
 
       marker.on("click", () => {
@@ -407,42 +407,36 @@
     });
 
     // --------- KNAPPER ---------
-    if (btnHome) {
-      btnHome.addEventListener("click", () => {
-        closeVideoPanel();
-        map.setView([59.19, 10.86], 11);
-      });
-    }
+    btnHome?.addEventListener("click", () => {
+      closeVideoPanel();
+      map.setView([59.19, 10.86], 11);
+    });
 
-    if (btnSoftis) {
-      btnSoftis.addEventListener("click", () => {
-        const softis = spots.find(s => s.name === "Softis i Nygaardsgata");
-        if (!softis) return;
-        map.setView([softis.lat, softis.lon], 16);
-        openVideoPanel(softis);
-      });
-    }
+    btnSoftis?.addEventListener("click", () => {
+      const softis = spots.find(s => s.name === "Softis i Nygaardsgata");
+      if (!softis) return;
+      map.setView([softis.lat, softis.lon], 16);
+      openVideoPanel(softis);
+    });
 
-    if (btnLocate && "geolocation" in navigator) {
-      btnLocate.addEventListener("click", () => {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            closeVideoPanel();
-            const { latitude, longitude } = pos.coords;
-            map.setView([latitude, longitude], 15);
-            L.circleMarker([latitude, longitude], { radius: 6 })
-              .addTo(map)
-              .bindPopup("Du er her")
-              .openPopup();
-          },
-          () => {
-            alert("Kunne ikke hente posisjonen din.");
-          }
-        );
-      });
-    }
+    btnLocate && "geolocation" in navigator && btnLocate.addEventListener("click", () => {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          closeVideoPanel();
+          const { latitude, longitude } = pos.coords;
+          map.setView([latitude, longitude], 15);
+          L.circleMarker([latitude, longitude], { radius: 6 })
+            .addTo(map)
+            .bindPopup("Du er her")
+            .openPopup();
+        },
+        () => {
+          alert("Kunne ikke hente posisjonen din.");
+        }
+      );
+    });
 
-    // --------- TEMPERATUR (valgfritt, samme som før) ---------
+    // --------- TEMPERATUR (valgfritt) ---------
     async function updateTemperatures() {
       try {
         const url =
@@ -472,7 +466,7 @@
 
     updateTemperatures();
 
-    // Sørg for at kartet får riktig størrelse
+    // --------- FIX KARTSTØRRELSE ---------
     window.addEventListener("load", () => {
       setTimeout(() => map.invalidateSize(), 200);
     });
