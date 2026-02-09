@@ -10,11 +10,14 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
   />
 
   <style>
-    :root { --header-height: 56px; }
+    :root {
+      --header-height: 56px;
+      --bottom-safe-gap: 80px;
+    }
+
     * { box-sizing: border-box; }
 
     body {
@@ -24,6 +27,7 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
+    /* HEADER */
     header {
       height: var(--header-height);
       background: #111;
@@ -58,17 +62,22 @@
       height: 26px;
     }
 
+    /* APP */
     #app {
-      height: calc(100vh - var(--header-height));
+      height: calc(100vh - var(--header-height) - var(--bottom-safe-gap));
+      margin-bottom: var(--bottom-safe-gap);
       position: relative;
       overflow: hidden;
+      background: #000;
     }
 
     #map {
       width: 100%;
       height: 100%;
+      background: #e0e0e0;
     }
 
+    /* KART-KNAPPER */
     #map-controls {
       position: absolute;
       top: 12px;
@@ -80,13 +89,16 @@
     }
 
     #map-controls button {
-      background: #fff;
+      background: rgba(255,255,255,0.95);
+      color: #000;
       border: none;
       padding: 6px 12px;
       border-radius: 999px;
       font-size: 13px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 
+    /* EMOJI-IKONER */
     .emoji-icon {
       width: 48px;
       height: 48px;
@@ -96,30 +108,43 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 4px rgba(0,0,0,0.4);
+      box-shadow: 0 0 4px rgba(0,0,0,0.35);
     }
 
-    /* Video-kort */
+    /* VIDEO-KORT */
     #video-panel {
       position: absolute;
       left: 8px;
       right: 8px;
-      bottom: -300px;
+      bottom: -320px;
       background: #111;
-      border-radius: 16px;
+      border-radius: 18px;
       padding: 10px;
       transition: bottom 0.25s ease;
       z-index: 1000;
     }
 
     #video-panel.active {
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+      bottom: 12px;
     }
 
     #video-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+
+    #video-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    #video-close {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 20px;
     }
 
     #video-player {
@@ -148,13 +173,12 @@
 
   <div id="map-controls">
     <button id="btn-home">🗺 Hele kartet</button>
-    <button id="btn-softis">🍦 Softis</button>
     <button id="btn-locate">📍 Finn meg</button>
   </div>
 
   <div id="video-panel">
     <div id="video-header">
-      <strong id="video-title"></strong>
+      <h3 id="video-title"></h3>
       <button id="video-close">✕</button>
     </div>
     <video id="video-player" controls playsinline></video>
@@ -168,21 +192,22 @@ const spots = [
   { name: "Foten badeplass", lat: 59.1703546, lon: 10.8266099, video: "foten.mp4" },
   { name: "Glufsa", lat: 59.17639, lon: 10.88216, video: "glufsa.mp4" },
   { name: "Mærrapanna", lat: 59.19746, lon: 10.79604, video: "maerrapanna.mp4" },
-  { name: "Softis i Nygaardsgata", lat: 59.20847, lon: 10.94176, video: "softis.mp4" },
+  { name: "Dammene", lat: 59.2323927, lon: 10.9475110, video: "dammene.mp4" },
+  { name: "Gamlebyen", lat: 59.200965, lon: 10.948700, video: "jangle-pa-vollane.mp4" },
+  { name: "Fredrikstad sentrum", lat: 59.213174, lon: 10.935622, video: "varmen.mp4" },
+  { name: "IDYLL Festivalen", lat: 59.202294, lon: 10.944766, video: "idyll.mp4" },
+  { name: "Kirkens Bymisjon Fredrikstad", lat: 59.212354, lon: 10.935563, video: "saerpingaer.mp4" },
+  { name: "Softis i Nygaardsgata", lat: 59.208470, lon: 10.941760, video: "softis.mp4" },
   { name: "Svaner på Rømmen", lat: 59.232723, lon: 10.988055, video: "svaner-pa-rommen.mp4" },
-
-  /* 🆕 Storesand */
-  {
-    name: "Storesand",
-    lat: 59.025137,
-    lon: 11.018665,
-    video: "storesand.mp4"
-  }
+  { name: "Storesand", lat: 59.025137, lon: 11.018665, video: "storesand.mp4" }
 ];
 
 const iconMap = {
   "Softis i Nygaardsgata": "🍦",
-  "Svaner på Rømmen": "🦢"
+  "Svaner på Rømmen": "🦢",
+  "IDYLL Festivalen": "🎤",
+  "Kirkens Bymisjon Fredrikstad": "⚽️",
+  "Fredrikstad sentrum": "🥵"
 };
 
 const map = L.map("map").setView([59.19, 10.86], 11);
@@ -202,7 +227,7 @@ spots.forEach(s => {
     .addTo(map)
     .on("click", () => {
       title.textContent = s.name;
-      player.src = s.video;
+      player.src = encodeURI(s.video);
       player.currentTime = 0;
       panel.classList.add("active");
       player.play().catch(()=>{});
@@ -217,17 +242,9 @@ document.getElementById("video-close").onclick = () => {
 document.getElementById("btn-home").onclick = () =>
   map.setView([59.19, 10.86], 11);
 
-document.getElementById("btn-softis").onclick = () => {
-  const s = spots.find(x => x.name === "Softis i Nygaardsgata");
-  map.setView([s.lat, s.lon], 16);
-  title.textContent = s.name;
-  player.src = s.video;
-  panel.classList.add("active");
-};
-
 document.getElementById("btn-locate").onclick = () => {
-  navigator.geolocation.getCurrentPosition(p => {
-    map.setView([p.coords.latitude, p.coords.longitude], 15);
+  navigator.geolocation.getCurrentPosition(pos => {
+    map.setView([pos.coords.latitude, pos.coords.longitude], 15);
   });
 };
 
