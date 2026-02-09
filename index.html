@@ -1,254 +1,407 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Sommerkart</title>
+  <!--
+    Denne filen viser et interaktivt kart over utvalgte badeplasser i
+    Fredrikstad–Hvaler-regionen. Kartet er satt opp med Leaflet og
+    OpenStreetMap som bakgrunnskart. Når du klikker på en badeplass
+    vises relaterte videoer (og artikler hvis du legger til lenker).
 
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+    Du kan utvide listen i bathingSpots nedenfor med flere steder.
+  -->
 
+  <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
   />
 
   <style>
-    :root {
-      --header-height: 56px;
-      --bottom-safe-gap: 80px;
+    #map {
+      width: 100%;
+      height: 80vh;
     }
 
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: #000;
-      color: #fff;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    .popup-content {
+      max-width: 400px;
     }
 
-    /* HEADER */
-    header {
-      height: var(--header-height);
-      background: #111;
-      border-bottom: 1px solid #222;
+    .video-container {
+      margin-top: 0.5rem;
+    }
+
+    .video-container video,
+    .video-container iframe {
+      width: 100%;
+      height: 220px;
+    }
+
+    /* Emoji-ikonene på kartet */
+    .emoji-icon {
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 48px;
+      height: 48px;
+      font-size: 28px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
     }
 
-    .header-inner {
-      width: 100%;
-      padding: 0 12px;
+    /* Header med tittel + FB-logo */
+    .header-container {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: #111;
+      color: #fff;
+      border-bottom: 1px solid #222;
     }
 
-    header h1 {
+    .header-container h1 {
+      font-family: "Georgia", "Times New Roman", serif;
+      font-size: 2rem;
       margin: 0;
-      font-size: 1.4rem;
-      font-family: Georgia, serif;
     }
 
     .fb-logo-link {
-      background: #fff;
-      border-radius: 50%;
-      padding: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 6px;
+      border-radius: 999px;
+      background: #ffffff;
     }
 
     .fb-logo-link img {
       width: 26px;
       height: 26px;
+      display: block;
     }
 
-    /* APP */
-    #app {
-      height: calc(100vh - var(--header-height) - var(--bottom-safe-gap));
-      margin-bottom: var(--bottom-safe-gap);
-      position: relative;
-      overflow: hidden;
-      background: #000;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-      background: #e0e0e0;
-    }
-
-    /* KART-KNAPPER */
-    #map-controls {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 900;
-    }
-
-    #map-controls button {
-      background: rgba(255,255,255,0.95);
-      color: #000;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 13px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    }
-
-    /* EMOJI-IKONER */
-    .emoji-icon {
-      width: 48px;
-      height: 48px;
-      font-size: 28px;
-      background: #fff;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 4px rgba(0,0,0,0.35);
-    }
-
-    /* VIDEO-KORT */
-    #video-panel {
-      position: absolute;
-      left: 8px;
-      right: 8px;
-      bottom: -320px;
-      background: #111;
-      border-radius: 18px;
-      padding: 10px;
-      transition: bottom 0.25s ease;
-      z-index: 1000;
-    }
-
-    #video-panel.active {
-      bottom: 12px;
-    }
-
-    #video-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    #video-title {
+    body {
       margin: 0;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    #video-close {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 20px;
-    }
-
-    #video-player {
-      width: 100%;
-      max-height: 35vh;
-      margin-top: 6px;
-      border-radius: 12px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #000;
-      object-fit: contain;
+      color: #fff;
     }
   </style>
 </head>
-
 <body>
-<header>
-  <div class="header-inner">
+  <!-- Topplinje med tittel + link til Fredriksstad Blad -->
+  <div class="header-container">
     <h1>Sommerkart</h1>
-    <a class="fb-logo-link" href="https://www.f-b.no/" target="_blank">
-      <img src="https://www.f-b.no/favicon.ico" alt="FB">
+    <a
+      class="fb-logo-link"
+      href="https://www.f-b.no/"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Gå til Fredriksstad Blad"
+    >
+      <img src="https://www.f-b.no/favicon.ico" alt="Fredriksstad Blad" />
     </a>
   </div>
-</header>
 
-<div id="app">
   <div id="map"></div>
 
-  <div id="map-controls">
-    <button id="btn-home">🗺 Hele kartet</button>
-    <button id="btn-locate">📍 Finn meg</button>
-  </div>
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
-  <div id="video-panel">
-    <div id="video-header">
-      <h3 id="video-title"></h3>
-      <button id="video-close">✕</button>
-    </div>
-    <video id="video-player" controls playsinline></video>
-  </div>
-</div>
+  <script>
+    // Liste over badeplasser. Du kan legge til flere objekter her.
+    // Hvert objekt kan ha: name, lat, lon, temperature, articles, videos.
+    const bathingSpots = [
+      {
+        name: "Foten badeplass",
+        lat: 59.1703546,
+        lon: 10.8266099,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Video fra Foten",
+            url: "foten.mp4"
+          }
+        ]
+      },
+      {
+        name: "Vispen",
+        lat: 59.0, // TODO: legg inn korrekte koordinater
+        lon: 10.0,
+        temperature: null,
+        articles: [],
+        videos: []
+      },
+      {
+        name: "Tangen",
+        lat: 59.0, // TODO: legg inn korrekte koordinater
+        lon: 10.0,
+        temperature: null,
+        articles: [],
+        videos: []
+      },
+      {
+        name: "Glufsa",
+        lat: 59.17639104968224,
+        lon: 10.882157758300316,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Video fra Glufsa",
+            url: "glufsa.mp4"
+          }
+        ]
+      },
+      {
+        name: "Mærrapanna",
+        lat: 59.1974631,
+        lon: 10.7960442,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Video fra Mærrapanna",
+            url: "maerrapanna.mp4"
+          }
+        ]
+      },
+      {
+        name: "Dammene",
+        lat: 59.2323927,
+        lon: 10.9475110,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Video fra Dammene",
+            url: "dammene.mp4"
+          }
+        ]
+      },
+      {
+        name: "Gamlebyen",
+        lat: 59.200965,
+        lon: 10.948700,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Jangle på Vollane",
+            url: "jangle-pa-vollane.mp4"
+          }
+        ]
+      },
+      {
+        name: "Fredrikstad sentrum",
+        lat: 59.213174,
+        lon: 10.935622,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Hva må du gjøre i varmen?",
+            url: "varmen.mp4"
+          }
+        ]
+      },
+      {
+        name: "IDYLL Festivalen",
+        lat: 59.202294,
+        lon: 10.944766,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Idyll!",
+            url: "idyll.mp4"
+          }
+        ]
+      },
+      {
+        name: "Kirkens Bymisjon Fredrikstad",
+        lat: 59.212354,
+        lon: 10.935563,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "SÆRPINGÆR",
+            url: "saerpingaer.mp4"
+          }
+        ]
+      },
+      {
+        // 🍦 Softis-punktet du ba om
+        name: "Softis i Nygaardsgata",
+        lat: 59.208470,
+        lon: 10.941760,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Softis",
+            url: "softis.mp4"
+          }
+        ]
+      },
+      {
+        // 🦢 Svaner på Rømmen
+        name: "Svaner på Rømmen",
+        lat: 59.232723,
+        lon: 10.988055,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Svaner på Rømmen",
+            url: "svaner-pa-rommen.mp4"
+          }
+        ]
+      },
+      {
+        // Storesand
+        name: "Storesand",
+        lat: 59.025137,
+        lon: 11.018665,
+        temperature: null,
+        articles: [],
+        videos: [
+          {
+            title: "Storesand",
+            url: "storesand.mp4"
+          }
+        ]
+      }
+      // Legg til flere badeplasser her ved behov
+    ];
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    // Oppretter kartet
+    const map = L.map("map").setView([59.171, 10.8], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> bidragsytere'
+    }).addTo(map);
 
-<script>
-const spots = [
-  { name: "Foten badeplass", lat: 59.1703546, lon: 10.8266099, video: "foten.mp4" },
-  { name: "Glufsa", lat: 59.17639, lon: 10.88216, video: "glufsa.mp4" },
-  { name: "Mærrapanna", lat: 59.19746, lon: 10.79604, video: "maerrapanna.mp4" },
-  { name: "Dammene", lat: 59.2323927, lon: 10.9475110, video: "dammene.mp4" },
-  { name: "Gamlebyen", lat: 59.200965, lon: 10.948700, video: "jangle-pa-vollane.mp4" },
-  { name: "Fredrikstad sentrum", lat: 59.213174, lon: 10.935622, video: "varmen.mp4" },
-  { name: "IDYLL Festivalen", lat: 59.202294, lon: 10.944766, video: "idyll.mp4" },
-  { name: "Kirkens Bymisjon Fredrikstad", lat: 59.212354, lon: 10.935563, video: "saerpingaer.mp4" },
-  { name: "Softis i Nygaardsgata", lat: 59.208470, lon: 10.941760, video: "softis.mp4" },
-  { name: "Svaner på Rømmen", lat: 59.232723, lon: 10.988055, video: "svaner-pa-rommen.mp4" },
-  { name: "Storesand", lat: 59.025137, lon: 11.018665, video: "storesand.mp4" }
-];
+    // Dictionary for å lagre markører slik at vi kan oppdatere popup senere
+    const markerByName = {};
 
-const iconMap = {
-  "Softis i Nygaardsgata": "🍦",
-  "Svaner på Rømmen": "🦢",
-  "IDYLL Festivalen": "🎤",
-  "Kirkens Bymisjon Fredrikstad": "⚽️",
-  "Fredrikstad sentrum": "🥵"
-};
+    // Tilpassede emoji-ikoner
+    const icons = {
+      default:    L.divIcon({ className: 'emoji-icon', html: '⛱️', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      heat:       L.divIcon({ className: 'emoji-icon', html: '🥵', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      soccer:     L.divIcon({ className: 'emoji-icon', html: '⚽️', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      microphone: L.divIcon({ className: 'emoji-icon', html: '🎤', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      icecream:   L.divIcon({ className: 'emoji-icon', html: '🍦', iconSize: [48, 48], iconAnchor: [24, 48] }),
+      swan:       L.divIcon({ className: 'emoji-icon', html: '🦢', iconSize: [48, 48], iconAnchor: [24, 48] })
+    };
 
-const map = L.map("map").setView([59.19, 10.86], 11);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    // Hvilke steder som får spesialikon
+    const iconForSpot = {
+      "Fredrikstad sentrum":           'heat',
+      "Kirkens Bymisjon Fredrikstad": 'soccer',
+      "IDYLL Festivalen":              'microphone',
+      "Softis i Nygaardsgata":        'icecream',
+      "Svaner på Rømmen":             'swan'
+    };
 
-const panel = document.getElementById("video-panel");
-const player = document.getElementById("video-player");
-const title = document.getElementById("video-title");
+    // Bygger HTML for popup basert på badeplass-data
+    function buildPopupContent(spot) {
+      let html = `<div class="popup-content"><h3>${spot.name}</h3>`;
 
-spots.forEach(s => {
-  const icon = L.divIcon({
-    className: "emoji-icon",
-    html: iconMap[s.name] || "⛱️"
-  });
+      // Temperaturtekst er fjernet etter ønske – men du kan legge inn igjen her hvis du vil.
 
-  L.marker([s.lat, s.lon], { icon })
-    .addTo(map)
-    .on("click", () => {
-      title.textContent = s.name;
-      player.src = encodeURI(s.video);
-      player.currentTime = 0;
-      panel.classList.add("active");
-      player.play().catch(()=>{});
+      if (spot.articles && spot.articles.length > 0) {
+        html += '<p><strong>Artikler:</strong></p><ul>';
+        spot.articles.forEach(article => {
+          html += `<li><a href="${article.url}" target="_blank" rel="noopener noreferrer">${article.title}</a></li>`;
+        });
+        html += '</ul>';
+      }
+
+      if (spot.videos && spot.videos.length > 0) {
+        html += '<p><strong>Video:</strong></p>';
+        html += '<div class="video-container">';
+        spot.videos.forEach(video => {
+          if (video.url.includes('youtube.com') || video.url.includes('youtu.be')) {
+            let embedUrl = video.url;
+            if (video.url.includes('youtu.be/')) {
+              const videoId = video.url.split('youtu.be/')[1];
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (video.url.includes('watch?v=')) {
+              const videoId = video.url.split('watch?v=')[1];
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
+            html += `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+          } else {
+            const urlWithEscapedQuestion = video.url.replace(/\?/g, '%3F');
+            const safeUrl = encodeURI(urlWithEscapedQuestion);
+            html += `<video controls preload="metadata" playsinline>
+              <source src="${safeUrl}" type="video/mp4">
+              Nettleseren din støtter ikke videovisning.
+            </video>`;
+          }
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    // Legg ut alle markører med riktig ikon
+    bathingSpots.forEach(spot => {
+      const iconKey = iconForSpot[spot.name] || 'default';
+      const marker = L.marker([spot.lat, spot.lon], { icon: icons[iconKey] }).addTo(map);
+      marker.bindPopup(buildPopupContent(spot));
+      markerByName[spot.name] = marker;
     });
-});
 
-document.getElementById("video-close").onclick = () => {
-  player.pause();
-  panel.classList.remove("active");
-};
+    // Henter badetemperaturer og oppdaterer spot.temperature (selv om det ikke vises i popup lenger)
+    async function updateTemperatures() {
+      try {
+        const url =
+          'https://arcgis.fredrikstad.kommune.no/server/rest/services/IOT/BadetemperaturInnsyn/MapServer/0/query?where=1%3D1&outFields=NAVN,TEMPERATUR,TIME&f=pjson';
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn('Fikk ikke tilgang til badetemperaturer fra kommunen');
+          return;
+        }
+        const data = await response.json();
+        if (data.features) {
+          data.features.forEach(feature => {
+            const attrs = feature.attributes || feature;
+            const name = attrs.NAVN;
+            const temp = attrs.TEMPERATUR;
+            const spot = bathingSpots.find(
+              s => s.name.toLowerCase() === String(name).toLowerCase()
+            );
+            if (spot) {
+              spot.temperature = temp;
+              const marker = markerByName[spot.name];
+              if (marker) {
+                marker.setPopupContent(buildPopupContent(spot));
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Feil ved henting av badetemperaturer:', error);
+      }
+    }
 
-document.getElementById("btn-home").onclick = () =>
-  map.setView([59.19, 10.86], 11);
-
-document.getElementById("btn-locate").onclick = () => {
-  navigator.geolocation.getCurrentPosition(pos => {
-    map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-  });
-};
-
-window.onload = () => setTimeout(() => map.invalidateSize(), 200);
-</script>
+    // Kall denne hvis du vil prøve å hente temperaturer
+    updateTemperatures();
+  </script>
 </body>
 </html>
