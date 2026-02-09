@@ -19,7 +19,6 @@
   <style>
     :root {
       --header: 56px;
-      --tabbar: 56px;
     }
 
     * {
@@ -33,24 +32,49 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    /* HEADER */
+    /* HEADER MED LOGO */
     header {
       height: var(--header);
+      background: #111;
+      border-bottom: 1px solid #222;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #111;
-      border-bottom: 1px solid #222;
     }
+
+    .header-inner {
+      width: 100%;
+      max-width: 900px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
     header h1 {
       margin: 0;
       font-size: 1.4rem;
       font-family: Georgia, serif;
     }
 
+    .fb-logo-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 6px;
+      border-radius: 999px;
+      background: #ffffff;
+    }
+
+    .fb-logo-link img {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
     /* APP-CONTAINER */
     #app {
-      height: calc(100vh - var(--header) - var(--tabbar));
+      height: calc(100vh - var(--header));
       position: relative;
     }
 
@@ -63,7 +87,7 @@
     #map {
       width: 100%;
       height: 100%;
-      background: #e0e0e0; /* så vi ser at kartet har høyde */
+      background: #e0e0e0; /* viser at kartet har høyde selv om fliser ikke lastes */
     }
 
     /* FLYTENDE KARTKNAPPER */
@@ -92,35 +116,6 @@
       box-shadow: 0 0 1px rgba(0,0,0,0.3);
     }
 
-    /* TABBAR NEDERST */
-    #tabbar {
-      height: var(--tabbar);
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      background: #111;
-      border-top: 1px solid #222;
-    }
-
-    #tabbar button {
-      background: none;
-      border: none;
-      color: #aaa;
-      font-size: 13px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-
-    #tabbar button span.icon {
-      font-size: 1.2rem;
-    }
-
-    #tabbar button.active {
-      color: #fff;
-    }
-
     /* LEAFLET-EMOJI-IKONER */
     .emoji-icon {
       width: 48px;
@@ -143,7 +138,21 @@
 
 <body>
   <header>
-    <h1>Sommerkart</h1>
+    <div class="header-inner">
+      <h1>Sommerkart</h1>
+
+      <!-- Logo/link til Fredriksstad Blad -->
+      <a
+        class="fb-logo-link"
+        href="https://www.f-b.no/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Gå til Fredriksstad Blad"
+      >
+        <!-- bruker favicon som enkel logo -->
+        <img src="https://www.f-b.no/favicon.ico" alt="Fredriksstad Blad" />
+      </a>
+    </div>
   </header>
 
   <div id="app">
@@ -155,17 +164,6 @@
         <button id="btn-locate">📍 Finn meg</button>
       </div>
     </div>
-  </div>
-
-  <div id="tabbar">
-    <button id="tab-map" class="active">
-      <span class="icon">🗺</span>
-      <span>Kart</span>
-    </button>
-    <button id="tab-fb">
-      <span class="icon">📰</span>
-      <span>FB</span>
-    </button>
   </div>
 
   <script
@@ -239,9 +237,6 @@
     const btnHome   = document.getElementById("btn-home");
     const btnSoftis = document.getElementById("btn-softis");
     const btnLocate = document.getElementById("btn-locate");
-
-    const tabMap = document.getElementById("tab-map");
-    const tabFb  = document.getElementById("tab-fb");
 
     // --- KART ---
 
@@ -322,24 +317,6 @@
             alert("Kunne ikke hente posisjonen din.");
           }
         );
-      });
-    }
-
-    // --- TAB-KNAPPER ---
-
-    if (tabMap) {
-      tabMap.addEventListener("click", () => {
-        tabMap.classList.add("active");
-        tabFb.classList.remove("active");
-        // vi er allerede på kartet, så ingen view-bytting nødvendig
-        setTimeout(() => map.invalidateSize(), 100);
-      });
-    }
-
-    if (tabFb) {
-      tabFb.addEventListener("click", () => {
-        // Åpner Fredriksstad Blad i ny fane
-        window.open("https://www.f-b.no/", "_blank");
       });
     }
 
