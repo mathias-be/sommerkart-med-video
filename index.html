@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <!-- NB: viewport-fit=cover trengs for iPhone, men vi løser Safari-feltet med ekstra margin -->
+  <!-- viewport-fit=cover for iPhone, men vi løser bunnen med egen buffer -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Sommerkart</title>
 
@@ -20,9 +20,8 @@
   <style>
     :root {
       --header-height: 56px;
-      --video-panel-height: 45vh;
-      /* Hvor mye vi løfter hele kartet/videodelen opp fra bunnen */
-      --bottom-safe-gap: 80px;
+      /* buffer nederst så Safari-feltet aldri treffer videokortet */
+      --bottom-safe-gap: 60px;
     }
 
     * {
@@ -80,12 +79,10 @@
       display: block;
     }
 
-    /* APP / KART
-       Vi gjør appen litt lavere enn full høyde, og legger inn en "buffer"
-       nederst (margin-bottom). Safari-feltet havner oppå bufferen, ikke oppå videoen. */
+    /* APP / KART */
     #app {
       height: calc(100vh - var(--header-height) - var(--bottom-safe-gap));
-      margin-bottom: var(--bottom-safe-gap);
+      margin-bottom: var(--bottom-safe-gap); /* ren svart stripe under */
       position: relative;
       overflow: hidden;
       background: #000;
@@ -139,28 +136,28 @@
       box-shadow: 0 0 4px rgba(0,0,0,0.35);
     }
 
-    /* VIDEO-PANEL */
+    /* VIDEO-PANEL: dekker hele kartflaten når aktiv */
     #video-panel {
       position: absolute;
       left: 0;
       right: 0;
-      bottom: -100%; /* skjult */
-      height: var(--video-panel-height);
-      max-height: 420px;
+      top: 100%;   /* starter utenfor skjerm */
+      bottom: 0;
       background: #111;
       border-radius: 18px 18px 0 0;
       box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
       padding: 10px 12px 14px;
       z-index: 1000;
-      transition: bottom 0.3s ease;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      transition: transform 0.25s ease-out;
+      transform: translateY(0); /* sammen med top/bottom gir dette animasjon */
     }
 
-    /* Når aktiv: 12px over bunnen av selve appen (som allerede er løftet 80px) */
+    /* Når aktiv: trekk panelet opp slik at det fyller hele #app */
     #video-panel.active {
-      bottom: 12px;
+      top: 0;
     }
 
     #video-panel::before {
@@ -179,18 +176,13 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding-top: 6px;
     }
 
     #video-title {
       margin: 0;
       font-size: 1rem;
       font-weight: 600;
-    }
-
-    #video-meta {
-      margin: 0;
-      font-size: 0.8rem;
-      color: #ccc;
     }
 
     #video-close {
@@ -207,8 +199,8 @@
       flex: 1;
       background: #000;
       border-radius: 12px;
-      object-fit: contain; /* hele videoen synlig innenfor kortet */
-      margin-top: 4px;
+      object-fit: contain; /* hele videoen synlig inne i kortet */
+      margin-top: 8px;
     }
 
     @media (min-width: 768px) {
@@ -220,6 +212,9 @@
         left: 50%;
         transform: translateX(-50%);
         width: 460px;
+      }
+      #video-panel.active {
+        top: 0;
       }
     }
   </style>
@@ -249,13 +244,10 @@
       <button id="btn-locate">📍 Finn meg</button>
     </div>
 
-    <!-- Videokort over kartet -->
+    <!-- Videokort som dekker kartet når det er åpent -->
     <div id="video-panel">
       <div id="video-header">
-        <div>
-          <h3 id="video-title"></h3>
-          <p id="video-meta">Vanntemperatur ukjent</p>
-        </div>
+        <h3 id="video-title"></h3>
         <button id="video-close" aria-label="Lukk video">✕</button>
       </div>
       <video id="video-player" controls playsinline></video>
@@ -275,64 +267,55 @@
         name: "Foten badeplass",
         lat: 59.1703546,
         lon: 10.8266099,
-        video: "foten.mp4",
-        temperature: null
+        video: "foten.mp4"
       },
       {
         name: "Glufsa",
         lat: 59.17639104968224,
         lon: 10.882157758300316,
-        video: "glufsa.mp4",
-        temperature: null
+        video: "glufsa.mp4"
       },
       {
         name: "Mærrapanna",
         lat: 59.1974631,
         lon: 10.7960442,
-        video: "maerrapanna.mp4",
-        temperature: null
+        video: "maerrapanna.mp4"
       },
       {
         name: "Dammene",
         lat: 59.2323927,
         lon: 10.9475110,
-        video: "dammene.mp4",
-        temperature: null
+        video: "dammene.mp4"
       },
       {
         name: "Gamlebyen",
         lat: 59.200965,
         lon: 10.948700,
-        video: "jangle-pa-vollane.mp4",
-        temperature: null
+        video: "jangle-pa-vollane.mp4"
       },
       {
         name: "Fredrikstad sentrum",
         lat: 59.213174,
         lon: 10.935622,
-        video: "varmen.mp4",
-        temperature: null
+        video: "varmen.mp4"
       },
       {
         name: "IDYLL Festivalen",
         lat: 59.202294,
         lon: 10.944766,
-        video: "idyll.mp4",
-        temperature: null
+        video: "idyll.mp4"
       },
       {
         name: "Kirkens Bymisjon Fredrikstad",
         lat: 59.212354,
         lon: 10.935563,
-        video: "saerpingaer.mp4",
-        temperature: null
+        video: "saerpingaer.mp4"
       },
       {
         name: "Softis i Nygaardsgata",
         lat: 59.208470,
         lon: 10.941760,
-        video: "softis.mp4",
-        temperature: null
+        video: "softis.mp4"
       }
     ];
 
@@ -350,7 +333,6 @@
 
     const videoPanel  = document.getElementById("video-panel");
     const videoTitle  = document.getElementById("video-title");
-    const videoMeta   = document.getElementById("video-meta");
     const videoPlayer = document.getElementById("video-player");
     const videoClose  = document.getElementById("video-close");
 
@@ -364,10 +346,6 @@
 
     function openVideoPanel(spot) {
       videoTitle.textContent = spot.name;
-
-      const tempText =
-        spot.temperature !== null ? `${spot.temperature} °C` : "Vanntemperatur ukjent";
-      videoMeta.textContent = tempText;
 
       const safeUrl = encodeURI(spot.video.replace(/\?/g, "%3F"));
       videoPlayer.src = safeUrl;
@@ -441,35 +419,6 @@
         );
       });
     }
-
-    // (Valgfritt) temperatur – oppdaterer spot.temperature
-    async function updateTemperatures() {
-      try {
-        const url =
-          "https://arcgis.fredrikstad.kommune.no/server/rest/services/IOT/BadetemperaturInnsyn/MapServer/0/query?where=1%3D1&outFields=NAVN,TEMPERATUR,TIME&f=pjson";
-        const response = await fetch(url);
-        if (!response.ok) return;
-        const data = await response.json();
-        if (!data.features) return;
-
-        data.features.forEach(feature => {
-          const attrs = feature.attributes || feature;
-          const name = String(attrs.NAVN || "").trim();
-          const temp = attrs.TEMPERATUR;
-
-          const spot = spots.find(
-            s => s.name.toLowerCase() === name.toLowerCase()
-          );
-          if (spot) {
-            spot.temperature = temp;
-          }
-        });
-      } catch (err) {
-        console.warn("Kunne ikke hente badetemperaturer:", err);
-      }
-    }
-
-    updateTemperatures();
 
     // Sørg for at kartet beregner størrelse riktig
     window.addEventListener("load", () => {
