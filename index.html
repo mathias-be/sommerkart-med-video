@@ -74,10 +74,10 @@
       display: block;
     }
 
-    /* APP */
+    /* APP / KART */
     #app {
       height: calc(100vh - var(--header-height) - var(--bottom-safe-gap));
-      margin-bottom: var(--bottom-safe-gap);
+      margin-bottom: var(--bottom-safe-gap);  /* svart felt under, så Safari-feltet ikke spiser noe */
       position: relative;
       overflow: hidden;
       background: #000;
@@ -110,6 +110,11 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 
+    #map-controls button:active {
+      transform: translateY(1px);
+      box-shadow: 0 0 2px rgba(0,0,0,0.3);
+    }
+
     /* EMOJI-IKONER */
     .emoji-icon {
       width: 48px;
@@ -123,12 +128,12 @@
       box-shadow: 0 0 4px rgba(0,0,0,0.35);
     }
 
-    /* VIDEO-PANEL */
+    /* VIDEO-PANEL (den svarte nederst) */
     #video-panel {
       position: absolute;
       left: 8px;
       right: 8px;
-      bottom: -320px;
+      bottom: -340px;        /* skjult */
       background: #111;
       border-radius: 18px;
       padding: 10px 12px 14px;
@@ -138,7 +143,7 @@
     }
 
     #video-panel.active {
-      bottom: 12px;
+      bottom: 12px;          /* godt over Safari-feltet */
     }
 
     #video-panel::before {
@@ -171,6 +176,31 @@
       border: none;
       color: #fff;
       font-size: 20px;
+      line-height: 1;
+      padding: 4px 6px;
+    }
+
+    /* Knappene for å bytte mellom flere videoer på samme sted */
+    #video-choices {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    #video-choices button {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+    }
+
+    #video-choices button.active {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
     }
 
     #video-player {
@@ -218,6 +248,7 @@
       <h3 id="video-title"></h3>
       <button id="video-close">✕</button>
     </div>
+    <div id="video-choices"></div>
     <video id="video-player" controls playsinline></video>
   </div>
 </div>
@@ -229,20 +260,105 @@
 ></script>
 
 <script>
+/**
+ * Alle steder + alle videoer.
+ * Nå bruker vi "videos": [ { title, file }, ... ]
+ */
 const spots = [
-  { name: "Foten badeplass", lat: 59.1703546, lon: 10.8266099, video: "foten.mp4" },
-  { name: "Glufsa", lat: 59.17639104968224, lon: 10.882157758300316, video: "glufsa.mp4" },
-  { name: "Mærrapanna", lat: 59.1974631, lon: 10.7960442, video: "maerrapanna.mp4" },
-  { name: "Dammene", lat: 59.2323927, lon: 10.9475110, video: "dammene.mp4" },
-  { name: "Gamlebyen", lat: 59.200965, lon: 10.948700, video: "jangle-pa-vollane.mp4" },
-  { name: "Fredrikstad sentrum", lat: 59.213174, lon: 10.935622, video: "varmen.mp4" },
-  { name: "IDYLL Festivalen", lat: 59.202294, lon: 10.944766, video: "idyll.mp4" },
-  { name: "Kirkens Bymisjon Fredrikstad", lat: 59.212354, lon: 10.935563, video: "saerpingaer.mp4" },
-  { name: "Softis i Nygaardsgata", lat: 59.208470, lon: 10.941760, video: "softis.mp4" },
-  { name: "Svaner på Rømmen", lat: 59.232723, lon: 10.988055, video: "svaner-pa-rommen.mp4" },
-  { name: "Storesand", lat: 59.025137, lon: 11.018665, video: "storesand.mp4" }
+  {
+    name: "Foten badeplass",
+    lat: 59.1703546,
+    lon: 10.8266099,
+    videos: [
+      { title: "Foten", file: "foten.mp4" },
+      { title: "Musikk på stranda", file: "Musikk-pa-stranda.mp4" }
+    ]
+  },
+  {
+    name: "Glufsa",
+    lat: 59.17639104968224,
+    lon: 10.882157758300316,
+    videos: [
+      { title: "Glufsa", file: "glufsa.mp4" }
+    ]
+  },
+  {
+    name: "Mærrapanna",
+    lat: 59.1974631,
+    lon: 10.7960442,
+    videos: [
+      { title: "Mærrapanna", file: "maerrapanna.mp4" }
+    ]
+  },
+  {
+    name: "Dammene",
+    lat: 59.2323927,
+    lon: 10.9475110,
+    videos: [
+      { title: "Dammene", file: "dammene.mp4" }
+    ]
+  },
+  {
+    name: "Gamlebyen",
+    lat: 59.200965,
+    lon: 10.948700,
+    videos: [
+      { title: "Jangle på vollane", file: "jangle-pa-vollane.mp4" }
+    ]
+  },
+  {
+    name: "Fredrikstad sentrum",
+    lat: 59.213174,
+    lon: 10.935622,
+    videos: [
+      { title: "Hva må du gjøre i varmen?", file: "varmen.mp4" }
+    ]
+  },
+  {
+    name: "IDYLL Festivalen",
+    lat: 59.202294,
+    lon: 10.944766,
+    videos: [
+      { title: "Idyll!", file: "idyll.mp4" },
+      { title: "Kleskode på jobb", file: "Kleskode-pa-jobb.mp4" },
+      { title: "Festivalmote", file: "Festivalmote.mp4" }
+    ]
+  },
+  {
+    name: "Kirkens Bymisjon Fredrikstad",
+    lat: 59.212354,
+    lon: 10.935563,
+    videos: [
+      { title: "SÆRPINGÆR", file: "saerpingaer.mp4" }
+    ]
+  },
+  {
+    name: "Softis i Nygaardsgata",
+    lat: 59.208470,
+    lon: 10.941760,
+    videos: [
+      { title: "Softis i Nygaardsgata", file: "softis.mp4" }
+    ]
+  },
+  {
+    name: "Svaner på Rømmen",
+    lat: 59.232723,
+    lon: 10.988055,
+    videos: [
+      { title: "Svaner på Rømmen", file: "svaner-pa-rommen.mp4" }
+    ]
+  },
+  {
+    name: "Storesand",
+    lat: 59.025137,
+    lon: 11.018665,
+    videos: [
+      { title: "Storesand", file: "storesand.mp4" }
+    ]
+  }
 ];
 
+// Spesielle emoji-ikoner for noen steder
 const iconMap = {
   "Fredrikstad sentrum": "🥵",
   "Kirkens Bymisjon Fredrikstad": "⚽️",
@@ -251,48 +367,106 @@ const iconMap = {
   "Svaner på Rømmen": "🦢"
 };
 
+// Kart
 const map = L.map("map").setView([59.19, 10.86], 11);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap-bidragsytere"
 }).addTo(map);
 
-const panel = document.getElementById("video-panel");
-const player = document.getElementById("video-player");
-const title = document.getElementById("video-title");
+// Video-panel
+const panel        = document.getElementById("video-panel");
+const player       = document.getElementById("video-player");
+const titleEl      = document.getElementById("video-title");
+const videoChoices = document.getElementById("video-choices");
+const closeBtn     = document.getElementById("video-close");
 
-function openVideo(spot) {
-  title.textContent = spot.name;
-  player.src = encodeURI(spot.video);
+// Hvilken spot + video som er aktiv akkurat nå
+let currentSpot = null;
+let currentIndex = 0;
+
+function setVideo(spot, index) {
+  const videos = spot.videos || [];
+  if (!videos.length) return;
+
+  const safeIndex = Math.max(0, Math.min(index, videos.length - 1));
+  const vid = videos[safeIndex];
+
+  currentSpot = spot;
+  currentIndex = safeIndex;
+
+  titleEl.textContent = vid.title || spot.name;
+
+  // Oppdater knappene
+  videoChoices.innerHTML = "";
+  if (videos.length > 1) {
+    videos.forEach((v, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = String(i + 1);
+      if (i === safeIndex) btn.classList.add("active");
+      btn.addEventListener("click", () => {
+        setVideo(spot, i);
+      });
+      videoChoices.appendChild(btn);
+    });
+  }
+
+  const safeUrl = encodeURI(vid.file.replace(/\?/g, "%3F"));
+  player.src = safeUrl;
   player.currentTime = 0;
-  panel.classList.add("active");
   player.play().catch(() => {});
 }
 
-function closeVideo() {
+function openPanelForSpot(spot) {
+  if (!spot.videos || !spot.videos.length) {
+    titleEl.textContent = spot.name + " (ingen video)";
+    videoChoices.innerHTML = "";
+    player.removeAttribute("src");
+    panel.classList.add("active");
+    return;
+  }
+
+  setVideo(spot, 0);
+  panel.classList.add("active");
+}
+
+function closePanel() {
   player.pause();
   panel.classList.remove("active");
 }
 
-document.getElementById("video-close").onclick = closeVideo;
-document.getElementById("btn-home").onclick = () => {
-  closeVideo();
-  map.setView([59.19, 10.86], 11);
-};
+closeBtn.addEventListener("click", closePanel);
 
+// Markerene på kartet
 spots.forEach(spot => {
+  const emoji = iconMap[spot.name] || "⛱️";
+
   const icon = L.divIcon({
     className: "emoji-icon",
-    html: iconMap[spot.name] || "⛱️"
+    html: emoji,
+    iconSize: [48, 48],
+    iconAnchor: [24, 48]
   });
 
-  L.marker([spot.lat, spot.lon], { icon })
-    .addTo(map)
-    .on("click", () => {
-      map.setView([spot.lat, spot.lon], 14);
-      openVideo(spot);
-    });
+  const marker = L.marker([spot.lat, spot.lon], { icon }).addTo(map);
+
+  marker.bindTooltip(spot.name, {
+    direction: "top",
+    offset: [0, -10]
+  });
+
+  marker.on("click", () => {
+    map.setView([spot.lat, spot.lon], 14);
+    openPanelForSpot(spot);
+  });
 });
 
+// Hele kartet-knappen
+document.getElementById("btn-home").addEventListener("click", () => {
+  closePanel();
+  map.setView([59.19, 10.86], 11);
+});
+
+// Sørg for at kartet beregner størrelse riktig
 window.addEventListener("load", () => {
   setTimeout(() => map.invalidateSize(), 200);
 });
