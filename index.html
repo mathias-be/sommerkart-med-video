@@ -262,7 +262,7 @@
 <script>
 /**
  * Alle steder + alle videoer.
- * Nå bruker vi "videos": [ { title, file }, ... ]
+ * Hvert sted har "videos": [ { title, file }, ... ]
  */
 const spots = [
   {
@@ -311,7 +311,8 @@ const spots = [
     lat: 59.213174,
     lon: 10.935622,
     videos: [
-      { title: "Hva må du gjøre i varmen?", file: "varmen.mp4" }
+      { title: "Hva må du gjøre i varmen?", file: "varmen.mp4" },
+      { title: "Kleskode på jobb (Stortorvet 3)", file: "Kleskode-pa-jobb.mp4" }
     ]
   },
   {
@@ -320,12 +321,12 @@ const spots = [
     lon: 10.944766,
     videos: [
       { title: "Idyll!", file: "idyll.mp4" },
-      { title: "Kleskode på jobb", file: "Kleskode-pa-jobb.mp4" },
-      { title: "Festivalmote", file: "Festivalmote.mp4" }
+      { title: "Festivalmote", file: "Festivalmote.mp4" },
+      { title: "Staysman", file: "staysman.mp4" }
     ]
   },
   {
-    name: "Kirkens Bymisjon Fredrikstad",
+    name: "Døm som ikke hoppær!",
     lat: 59.212354,
     lon: 10.935563,
     videos: [
@@ -361,7 +362,7 @@ const spots = [
 // Spesielle emoji-ikoner for noen steder
 const iconMap = {
   "Fredrikstad sentrum": "🥵",
-  "Kirkens Bymisjon Fredrikstad": "⚽️",
+  "Døm som ikke hoppær!": "⚽️",
   "IDYLL Festivalen": "🎤",
   "Softis i Nygaardsgata": "🍦",
   "Svaner på Rømmen": "🦢"
@@ -380,7 +381,6 @@ const titleEl      = document.getElementById("video-title");
 const videoChoices = document.getElementById("video-choices");
 const closeBtn     = document.getElementById("video-close");
 
-// Hvilken spot + video som er aktiv akkurat nå
 let currentSpot = null;
 let currentIndex = 0;
 
